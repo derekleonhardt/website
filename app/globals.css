@@ -1,7 +1,3 @@
-@import "tailwindcss";
-
-/* ── Custom font aliases (next/font sets --font-cormorant etc. on body) ── */
-
 /* ── Design tokens ────────────────────────────────────────────────────── */
 :root {
   --bg: #ffffff;

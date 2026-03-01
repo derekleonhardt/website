@@ -8,6 +8,6 @@ export const posts: Post[] = [
   {
     slug: "hello-world",
     title: "Hello World",
-    date: "02-27-2026",
+    date: "2026-02-27",
   },
 ];

@@ -10,6 +10,7 @@ const recentItems = [
     title: p.title,
     href: p.href,
     meta: String(p.year),
+    sortKey: `${p.year}-01-01`,
     external: true,
   })),
   ...posts.slice(0, 3).map((p) => ({
@@ -17,10 +18,11 @@ const recentItems = [
     title: p.title,
     href: `/blog/${p.slug}`,
     meta: p.date,
+    sortKey: p.date,
     external: false,
   })),
 ]
-  .sort((a, b) => b.meta.localeCompare(a.meta))
+  .sort((a, b) => b.sortKey.localeCompare(a.sortKey))
   .slice(0, 5);
 
 const socialLinks = [
