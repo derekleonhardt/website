@@ -671,6 +671,26 @@ a {
   }
 }
 
+.skate-spacer {
+  transition: height 0.3s ease;
+}
+
+.skate-panel {
+  position: fixed;
+  bottom: -33vh;
+  left: var(--sidebar-width, 0px);
+  right: 0;
+  height: 33vh;
+  transition: bottom 0.3s ease;
+  z-index: 40;
+  background-color: var(--surface);
+  border-top: 1px solid var(--border);
+}
+
+.skate-panel--open {
+  bottom: 0;
+}
+
 .skate-hint {
   position: fixed;
   right: 1rem;
@@ -686,7 +706,7 @@ a {
 }
 
 @media (max-width: 960px) {
-  .skate-hint {
+  .skate-toggle {
     display: none;
   }
 }

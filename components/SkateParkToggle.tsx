@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import SkatePark from "./SkatePark";
 
-const PARK_H = "33vh";
-
 export default function SkateParkToggle() {
   const [visible, setVisible] = useState(false);
 
@@ -21,33 +19,19 @@ export default function SkateParkToggle() {
   }, []);
 
   return (
-    <>
-      <div
-        style={{ height: visible ? PARK_H : 0, transition: "height 0.3s ease" }}
-      />
+    <div className="skate-toggle">
+      <div className="skate-spacer" style={{ height: visible ? "33vh" : 0 }} />
 
-      <div
-        style={{
-          position: "fixed",
-          bottom: visible ? 0 : `-${PARK_H}`,
-          left: "var(--sidebar-width)",
-          right: 0,
-          height: PARK_H,
-          transition: "bottom 0.3s ease",
-          zIndex: 40,
-          backgroundColor: "var(--surface)",
-          borderTop: "1px solid var(--border)",
-        }}
-      >
-        <SkatePark />
+      <div className={`skate-panel ${visible ? "skate-panel--open" : ""}`}>
+        <SkatePark visible={visible} />
       </div>
 
       <div
         className="skate-hint"
-        style={visible ? { bottom: `calc(${PARK_H} + 0.5rem)` } : undefined}
+        style={visible ? { bottom: "calc(33vh + 0.5rem)" } : undefined}
       >
         press S to {visible ? "hide" : "skate"}
       </div>
-    </>
+    </div>
   );
 }
