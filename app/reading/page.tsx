@@ -1,6 +1,5 @@
 import { books } from "@/lib/books";
 import HomeSidebar from "@/components/HomeSidebar";
-import PageHeader from "@/components/PageHeader";
 import PageLayout from "@/components/PageLayout";
 
 export const metadata = { title: "Reading — Derek Leonhardt" };
@@ -11,10 +10,10 @@ const read = books.filter((b) => b.status === "read");
 export default function ReadingPage() {
   return (
     <PageLayout sidebar={<HomeSidebar />} maxWidth="var(--content-width)">
-      <PageHeader
-        title="Reading"
-        description="Books I'm working through and ones I would highly recommend"
-      />
+      <div className="page-header">
+        <h1>Reading</h1>
+        <p>Books I&apos;m working through and ones I would highly recommend</p>
+      </div>
 
       <div className="section-start">
         {reading.length > 0 && (

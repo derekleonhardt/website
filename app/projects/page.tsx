@@ -1,15 +1,16 @@
 import { projects } from "@/lib/projects";
 import HomeSidebar from "@/components/HomeSidebar";
-import PageHeader from "@/components/PageHeader";
 import PageLayout from "@/components/PageLayout";
-import Tag from "@/components/Tag";
 
 export const metadata = { title: "Projects — Derek Leonhardt" };
 
 export default function ProjectsPage() {
   return (
     <PageLayout sidebar={<HomeSidebar />} maxWidth="var(--content-width)">
-      <PageHeader title="Projects" description="Tinkering" />
+      <div className="page-header">
+        <h1>Projects</h1>
+        <p>Tinkering</p>
+      </div>
 
       {projects.map((project) => (
         <a
@@ -30,7 +31,7 @@ export default function ProjectsPage() {
           </p>
           <div className="project-entry__tags">
             {project.tags.map((tag) => (
-              <Tag key={tag}>{tag}</Tag>
+              <span key={tag} className="text-muted tag">{tag}</span>
             ))}
           </div>
         </a>

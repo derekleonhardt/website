@@ -2,7 +2,6 @@ import Link from "next/link";
 import { posts } from "@/lib/posts";
 import { getReadingTime } from "@/lib/reading-time";
 import HomeSidebar from "@/components/HomeSidebar";
-import PageHeader from "@/components/PageHeader";
 import PageLayout from "@/components/PageLayout";
 
 export const metadata = { title: "Writing — Derek Leonhardt" };
@@ -10,10 +9,10 @@ export const metadata = { title: "Writing — Derek Leonhardt" };
 export default function BlogPage() {
   return (
     <PageLayout sidebar={<HomeSidebar />} maxWidth="var(--content-width)">
-      <PageHeader
-        title="Writing"
-        description="Occasional writing on software, systems, and things I'm figuring out."
-      />
+      <div className="page-header">
+        <h1>Writing</h1>
+        <p>Occasional writing on software, systems, and things I&apos;m figuring out.</p>
+      </div>
 
       {posts.map((post) => (
         <Link
