@@ -55,9 +55,9 @@ export default function HomePage() {
 
           <p className="hero-bio mono-muted">
             Hey, I&apos;m Derek.
-            <br />I love to build and learn new things, interested in applied AI
-            and distributed systems. Currently a Software Engineer at Capital
-            One.
+            <br />I love to build and learn new things, I&apos;m interested in
+            applied AI and distributed systems. Currently a Software Engineer at
+            Capital One.
           </p>
 
           <div className="hero-links">
@@ -81,9 +81,7 @@ export default function HomePage() {
           </div>
 
           <div className="hero-recents">
-            <span className="label">
-              Recent
-            </span>
+            <span className="label">Recent</span>
             <div>
               {recentItems.map((item) => {
                 const inner = (

@@ -14,7 +14,10 @@ export default function BlogPage() {
     <PageLayout sidebar={<HomeSidebar />} maxWidth="var(--content-width)">
       <div className="page-header">
         <h1>Writing</h1>
-        <p>Occasional writing on software, systems, and things I&apos;m figuring out.</p>
+        <p>
+          Occasional writing on software, systems, and things I&apos;m figuring
+          out.
+        </p>
       </div>
 
       {posts.map((post) => (

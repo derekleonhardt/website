@@ -65,7 +65,12 @@ const MAX_SPARKS = 50;
 const SPARK_CHANCE = 0.35;
 
 const GAME_KEYS = new Set([
-  "ArrowUp", "ArrowLeft", "ArrowRight", "KeyW", "KeyA", "KeyD",
+  "ArrowUp",
+  "ArrowLeft",
+  "ArrowRight",
+  "KeyW",
+  "KeyA",
+  "KeyD",
 ]);
 
 interface Spark {
@@ -105,7 +110,7 @@ export default function SkatePark({ className, visible = true }: Props) {
 
     // Terrain geometry (recomputed on resize)
     let groundY = 0;
-    let lipY = 0;     // quarterpipe deck / coping
+    let lipY = 0; // quarterpipe deck / coping
     let curveTopY = 0; // where curve meets vert
     let curveR = 0;
     let railX1 = 0;
@@ -191,7 +196,10 @@ export default function SkatePark({ className, visible = true }: Props) {
       mono = cs.getPropertyValue("--font-mono").trim() || "monospace";
 
       groundY = vH - GROUND_MARGIN;
-      const qpR = Math.max(VERT_H + 1, Math.min(QP_MAX_R, groundY - PLAT_W - 4));
+      const qpR = Math.max(
+        VERT_H + 1,
+        Math.min(QP_MAX_R, groundY - PLAT_W - 4),
+      );
       curveR = Math.max(1, qpR - VERT_H);
       lipY = groundY - qpR;
       curveTopY = lipY + VERT_H;
@@ -234,7 +242,9 @@ export default function SkatePark({ className, visible = true }: Props) {
       keys[e.code] = true;
       if (e.code === "ArrowUp" || e.code === "KeyW") ollie();
     };
-    const onKeyUp = (e: KeyboardEvent) => { keys[e.code] = false; };
+    const onKeyUp = (e: KeyboardEvent) => {
+      keys[e.code] = false;
+    };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
 
@@ -258,14 +268,16 @@ export default function SkatePark({ className, visible = true }: Props) {
         if (skater.sparks.length < MAX_SPARKS && Math.random() < SPARK_CHANCE) {
           const a = -Math.PI * 0.6 + Math.random() * Math.PI * 0.4;
           skater.sparks.push({
-            x: skater.x, y: railY,
+            x: skater.x,
+            y: railY,
             vx: Math.cos(a) * (1.5 + Math.random() * 2.5),
             vy: Math.sin(a) * 1.5 - 1,
             life: 1,
           });
         }
 
-        if (skater.x < railX1 - 2 || skater.x > railX2 + 2) skater.onRail = false;
+        if (skater.x < railX1 - 2 || skater.x > railX2 + 2)
+          skater.onRail = false;
       } else if (skater.onGround) {
         skater.vy = 0;
         skater.vx *= Math.pow(FRICTION_GROUND, t);
@@ -289,8 +301,14 @@ export default function SkatePark({ className, visible = true }: Props) {
       }
 
       // Wall bounce
-      if (skater.x < 1) { skater.x = 1; skater.vx = Math.abs(skater.vx) * 0.4; }
-      if (skater.x > vW - 1) { skater.x = vW - 1; skater.vx = -Math.abs(skater.vx) * 0.4; }
+      if (skater.x < 1) {
+        skater.x = 1;
+        skater.vx = Math.abs(skater.vx) * 0.4;
+      }
+      if (skater.x > vW - 1) {
+        skater.x = vW - 1;
+        skater.vx = -Math.abs(skater.vx) * 0.4;
+      }
 
       // ── Collision ───────────────────────────────────────────────────
       if (!skater.onRail) {
@@ -311,15 +329,21 @@ export default function SkatePark({ className, visible = true }: Props) {
           } else {
             skater.vy = 0;
             skater.onGround = true;
-            if (!wasGrounded) { skater.flipping = false; skater.flipAngle = 0; }
+            if (!wasGrounded) {
+              skater.flipping = false;
+              skater.flipAngle = 0;
+            }
           }
         } else {
           // Check rail grind: falling, within rail bounds, truck about to cross rail
           const truckY = skater.y - RAIL_SNAP;
           const truckNextY = truckY + skater.vy * t + GRAVITY * t * 2;
           if (
-            skater.x > railX1 && skater.x < railX2 &&
-            skater.vy > 0 && truckY <= railY && truckNextY >= railY
+            skater.x > railX1 &&
+            skater.x < railX2 &&
+            skater.vy > 0 &&
+            truckY <= railY &&
+            truckNextY >= railY
           ) {
             skater.onRail = true;
             skater.y = railY + RAIL_SNAP;
@@ -332,7 +356,10 @@ export default function SkatePark({ className, visible = true }: Props) {
 
       if (skater.flipping) {
         skater.flipAngle += skater.flipSpeed * t;
-        if (skater.flipAngle >= 360) { skater.flipAngle = 0; skater.flipping = false; }
+        if (skater.flipAngle >= 360) {
+          skater.flipAngle = 0;
+          skater.flipping = false;
+        }
       }
 
       skater.sparks = skater.sparks.filter((sp) => {
@@ -397,8 +424,10 @@ export default function SkatePark({ className, visible = true }: Props) {
 
       // Back walls
       ctx.beginPath();
-      ctx.moveTo(0, 0); ctx.lineTo(0, lipY);
-      ctx.moveTo(vW, 0); ctx.lineTo(vW, lipY);
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, lipY);
+      ctx.moveTo(vW, 0);
+      ctx.lineTo(vW, lipY);
       ctx.strokeStyle = fg;
       ctx.lineWidth = 1;
       ctx.globalAlpha = 0.2;
@@ -415,8 +444,10 @@ export default function SkatePark({ className, visible = true }: Props) {
 
       // Rail posts
       ctx.beginPath();
-      ctx.moveTo(railX1 + RAIL_POST_INSET, railY); ctx.lineTo(railX1 + RAIL_POST_INSET, groundY);
-      ctx.moveTo(railX2 - RAIL_POST_INSET, railY); ctx.lineTo(railX2 - RAIL_POST_INSET, groundY);
+      ctx.moveTo(railX1 + RAIL_POST_INSET, railY);
+      ctx.lineTo(railX1 + RAIL_POST_INSET, groundY);
+      ctx.moveTo(railX2 - RAIL_POST_INSET, railY);
+      ctx.lineTo(railX2 - RAIL_POST_INSET, groundY);
       ctx.strokeStyle = muted;
       ctx.lineWidth = 1.5;
       ctx.globalAlpha = 0.4;
@@ -489,7 +520,10 @@ export default function SkatePark({ className, visible = true }: Props) {
       ctx.lineJoin = "round";
 
       if (skater.flipping) {
-        const progress = Math.max(0, Math.sin((skater.flipAngle * Math.PI) / 180));
+        const progress = Math.max(
+          0,
+          Math.sin((skater.flipAngle * Math.PI) / 180),
+        );
         const d = skater.facing;
         ctx.beginPath();
         ctx.moveTo(d * HIP_X, hipY);

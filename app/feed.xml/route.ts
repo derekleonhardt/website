@@ -17,11 +17,7 @@ export function GET() {
   const items = posts.map((post) => {
     const content = getPostContent(post.slug);
     const excerpt = content
-      ? content
-          .replace(/^#.+$/gm, "")
-          .replace(/\n+/g, " ")
-          .trim()
-          .slice(0, 280)
+      ? content.replace(/^#.+$/gm, "").replace(/\n+/g, " ").trim().slice(0, 280)
       : "";
 
     return `    <item>

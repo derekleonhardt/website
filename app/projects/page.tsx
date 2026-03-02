@@ -34,7 +34,9 @@ export default function ProjectsPage() {
           </p>
           <div className="project-entry__tags">
             {project.tags.map((tag) => (
-              <span key={tag} className="text-muted tag">{tag}</span>
+              <span key={tag} className="text-muted tag">
+                {tag}
+              </span>
             ))}
           </div>
         </a>

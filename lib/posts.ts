@@ -17,7 +17,12 @@ export const posts: Post[] = [
 
 export function getPostContent(slug: string): string | null {
   for (const ext of [".mdx", ".md"]) {
-    const filePath = path.join(process.cwd(), "content", "blog", `${slug}${ext}`);
+    const filePath = path.join(
+      process.cwd(),
+      "content",
+      "blog",
+      `${slug}${ext}`,
+    );
     if (fs.existsSync(filePath)) return fs.readFileSync(filePath, "utf8");
   }
   return null;

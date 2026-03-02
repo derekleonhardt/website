@@ -42,11 +42,7 @@ export async function generateMetadata({ params }: PageProps) {
   const post = posts.find((p) => p.slug === slug);
   const content = getPostContent(slug);
   const excerpt = content
-    ? content
-        .replace(/^#.+$/gm, "")
-        .replace(/\n+/g, " ")
-        .trim()
-        .slice(0, 160)
+    ? content.replace(/^#.+$/gm, "").replace(/\n+/g, " ").trim().slice(0, 160)
     : undefined;
   return {
     title: post ? `${post.title} — Derek Leonhardt` : "Post — Derek Leonhardt",
