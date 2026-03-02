@@ -62,7 +62,7 @@ export default function HomePage() {
 
           <div className="hero-links">
             <span className="mono-muted">
-              You can find me in Washington DC, Florida, or on:
+              You can find me in DC, Florida, or here:
             </span>
             <div className="social-icons">
               {socialLinks.map(({ icon: Icon, href, label }) => (

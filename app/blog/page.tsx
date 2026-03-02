@@ -6,7 +6,7 @@ import PageLayout from "@/components/PageLayout";
 
 export const metadata = {
   title: "Writing — Derek Leonhardt",
-  description: "Occasional writing on software, systems, and things I'm figuring out.",
+  description: "Occasional writing.",
 };
 
 export default function BlogPage() {

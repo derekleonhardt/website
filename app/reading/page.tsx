@@ -15,7 +15,7 @@ export default function ReadingPage() {
     <PageLayout sidebar={<HomeSidebar />} maxWidth="var(--content-width)">
       <div className="page-header">
         <h1>Reading</h1>
-        <p>Books I&apos;m working through and ones I would highly recommend</p>
+        <p>Books I&apos;m reading and ones I&apos;d recommend</p>
       </div>
 
       <div className="section-start">
