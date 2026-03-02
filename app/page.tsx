@@ -55,9 +55,9 @@ export default function HomePage() {
 
           <p className="hero-bio mono-muted">
             Hey, I&apos;m Derek.
-            <br />I love to build and learn new things, I&apos;m interested in
-            applied AI and distributed systems. Currently a Software Engineer at
-            Capital One.
+            <br />I love to build and learn new things. I&apos;m interested in
+            applied AI and distributed system and am currently a Software
+            Engineer at Capital One.
           </p>
 
           <div className="hero-links">
