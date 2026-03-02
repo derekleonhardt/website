@@ -47,47 +47,24 @@ export default function HomePage() {
 
       <div className="home-main">
         <div className="home-column">
-          <h1
-            className="hero-name font-display"
-            style={{
-              fontSize: "clamp(2.5rem, 2.5rem + 1.5vw, 3.75rem)",
-              fontWeight: 300,
-              lineHeight: 0.95,
-              letterSpacing: "-0.03em",
-              margin: 0,
-              marginBottom: "1.75rem",
-            }}
-          >
+          <h1 className="hero-name font-display">
             Derek
             <br />
             Leonhardt
           </h1>
 
-          <p
-            className="hero-bio mono-muted"
-            style={{ margin: 0, marginBottom: "1.5rem" }}
-          >
+          <p className="hero-bio mono-muted">
             Hey, I&apos;m Derek.
             <br />I love to build and learn new things, interested in applied AI
             and distributed systems. Currently a Software Engineer at Capital
             One.
           </p>
 
-          <div
-            className="hero-links"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.75rem",
-              marginBottom: "2.75rem",
-            }}
-          >
+          <div className="hero-links">
             <span className="mono-muted">
               You can find me in Washington DC, Florida, or on:
             </span>
-            <div
-              style={{ display: "flex", gap: "1.25rem", alignItems: "center" }}
-            >
+            <div className="social-icons">
               {socialLinks.map(({ icon: Icon, href, label }) => (
                 <a
                   key={href}
@@ -104,20 +81,17 @@ export default function HomePage() {
           </div>
 
           <div className="hero-recents">
-            <span className="label" style={{ marginBottom: "0.75rem" }}>
+            <span className="label">
               Recent
             </span>
-            <div style={{ display: "flex", flexDirection: "column" }}>
+            <div>
               {recentItems.map((item) => {
                 const inner = (
                   <>
-                    <span
-                      className="font-display"
-                      style={{ fontSize: "1.25rem" }}
-                    >
+                    <span className="font-display recent-row__title">
                       {item.title}
                     </span>
-                    <span className="text-muted" style={{ fontSize: "10px" }}>
+                    <span className="text-muted recent-row__meta">
                       {item.meta} · {item.kind}
                     </span>
                   </>

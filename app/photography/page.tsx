@@ -3,7 +3,10 @@ import { photos } from "@/lib/photos";
 import HomeSidebar from "@/components/HomeSidebar";
 import PageLayout from "@/components/PageLayout";
 
-export const metadata = { title: "Photography — Derek Leonhardt" };
+export const metadata = {
+  title: "Photography — Derek Leonhardt",
+  description: "Fujifilm X100V - Sony A6000 - Canon AE-1",
+};
 
 const gallery = (
   <div className="photo-gallery">

@@ -3,71 +3,69 @@
 import { useEffect, useRef } from "react";
 
 // ── Virtual coordinate system ───────────────────────────────────────────
-// All dimensions are in design units, scaled to fit the container height.
-// Width adapts to the container's aspect ratio (more width = more flat ground).
-const DESIGN_H = 300;
+// All geometry uses "design units" against a fixed height. A scale factor
+// (containerHeight / VIRTUAL_H) maps them to pixels via ctx.setTransform.
+// Virtual width stretches to match the container aspect ratio.
+const VIRTUAL_H = 300;
 
-// Physics (design units per frame at 60fps)
+// ── Physics (design units / frame @ 60 fps) ─────────────────────────────
 const GRAVITY = 0.45;
-const MOVE_ACCEL = 0.38;
-const GND_FRICTION = 0.975;
-const AIR_FRICTION = 0.994;
-const RAIL_FRICTION = 0.965;
-const JUMP_SPEED = 7.0;
+const PUSH_ACCEL = 0.38;
+const FRICTION_GROUND = 0.975;
+const FRICTION_AIR = 0.994;
+const FRICTION_RAIL = 0.965;
+const OLLIE_VEL = 7.0;
 const MAX_SPEED = 9;
-const BOOST_MIN_SPD = 4.0;
+const BOOST_THRESHOLD = 4.0;
 
-// Terrain (design units)
-const QP_MAX_R = 105;
-const VERT_H = 14;
-const PLAT_W = 24;
-const GROUND_MARGIN = 28;
-const RAIL_HALF_W = 85;
-const RAIL_HEIGHT = 20;
+// ── Terrain (design units) ──────────────────────────────────────────────
+const QP_MAX_R = 105; // quarterpipe max radius
+const VERT_H = 14; // vertical section above the curve
+const PLAT_W = 24; // flat deck width atop each quarterpipe
+const GROUND_MARGIN = 28; // space below ground line to canvas edge
+const RAIL_HALF_LEN = 85;
+const RAIL_H = 20; // rail height above ground
 const RAIL_POST_INSET = 18;
 
-// Board (design units)
-const BW = 24;
-const BH = 3;
-const WR = 2.8;
-const KICK_Y = -3;
-const KICK_TRANS = 4;
-const TIP_OVER = 1.6;
-const TRUCK_X = BW / 2 - 5;
+// ── Board (design units) ────────────────────────────────────────────────
+const BOARD_W = 24;
+const BOARD_H = 3;
+const WHEEL_R = 2.8;
+const KICK_RISE = -3; // nose/tail rise (negative = up)
+const KICK_BLEND = 4; // flat-to-kick transition zone
+const TIP_OVER = 1.6; // overhang past the kick
+const TRUCK_X = BOARD_W / 2 - 5;
 
-// Body (design units)
+// ── Body (design units) ─────────────────────────────────────────────────
 const HEAD_R = 5.5;
 const TORSO = 13;
-const LEG_GND = 12;
+const LEG_STAND = 12;
 const LEG_AIR = 7;
 const ARM = 9;
 const LIMB_W = 2;
 const HIP_X = 4;
-const KNEE_X = 7;
-const STAND_KNEE_X = 2;
+const KNEE_X_AIR = 7;
+const KNEE_X_STAND = 2;
+
+// Kickflip leg offsets
 const FLICK_REACH = 6;
 const FLICK_EXT = 8;
 const TUCK_KNEE = 6;
 const TUCK_FOOT = 2;
 const TUCK_FOOT_EXT = 4;
 
-// Derived board geometry
-const WHEEL_CY = BH / 2 + WR + 1;
-const TRUCK_GRIND_Y = BH / 2 + (WHEEL_CY - BH / 2) * 0.4;
-const WHEEL_BOTTOM = WHEEL_CY + WR;
-const RAIL_SNAP = WHEEL_BOTTOM - TRUCK_GRIND_Y;
+// ── Derived board geometry ──────────────────────────────────────────────
+const WHEEL_CY = BOARD_H / 2 + WHEEL_R + 1;
+const TRUCK_GRIND_Y = BOARD_H / 2 + (WHEEL_CY - BOARD_H / 2) * 0.4;
+const WHEEL_BOTTOM = WHEEL_CY + WHEEL_R;
+const RAIL_SNAP = WHEEL_BOTTOM - TRUCK_GRIND_Y; // feet-to-truck offset for rail snapping
 
-// Sparks
+// ── Sparks ──────────────────────────────────────────────────────────────
 const MAX_SPARKS = 50;
 const SPARK_CHANCE = 0.35;
 
 const GAME_KEYS = new Set([
-  "ArrowUp",
-  "ArrowLeft",
-  "ArrowRight",
-  "KeyW",
-  "KeyA",
-  "KeyD",
+  "ArrowUp", "ArrowLeft", "ArrowRight", "KeyW", "KeyA", "KeyD",
 ]);
 
 interface Spark {
@@ -75,7 +73,7 @@ interface Spark {
   y: number;
   vx: number;
   vy: number;
-  life: number;
+  life: number; // 1 → 0
 }
 
 interface Props {
@@ -97,31 +95,31 @@ export default function SkatePark({ className, visible = true }: Props) {
     if (!ctx) return;
 
     const keys: Record<string, boolean> = {};
-    let raf = 0;
+    let rafId = 0;
 
-    // Virtual dimensions
+    // Virtual viewport (width recomputed on resize)
     let vW = 0;
-    const vH = DESIGN_H;
-    let realW = 0;
+    const vH = VIRTUAL_H;
+    let pixelW = 0;
     let dpr = 1;
 
     // Terrain geometry (recomputed on resize)
     let groundY = 0;
-    let lipY = 0;
-    let vertEndY = 0;
+    let lipY = 0;     // quarterpipe deck / coping
+    let curveTopY = 0; // where curve meets vert
     let curveR = 0;
     let railX1 = 0;
     let railX2 = 0;
     let railY = 0;
 
-    // Cached theme (updated on resize)
+    // Theme (synced from CSS vars on resize)
     let fg = "#1c1916";
     let muted = "#8a7a6e";
-    let borderColor = "#ddd5cc";
+    let border = "#ddd5cc";
     let accent = "#b05c3a";
-    let monoFont = "monospace";
+    let mono = "monospace";
 
-    const sk = {
+    const skater = {
       x: 0,
       y: 0,
       vx: 0,
@@ -131,21 +129,22 @@ export default function SkatePark({ className, visible = true }: Props) {
       facing: 1 as 1 | -1,
       flipAngle: 0,
       flipSpeed: 13.5,
-      kickflipping: false,
+      flipping: false,
       sparks: [] as Spark[],
-      drawAngle: 0,
+      tilt: 0, // board rotation to match surface slope
     };
 
-    // ── Surface helpers ───────────────────────────────────────────────────
+    // ── Surface helpers ─────────────────────────────────────────────────
+    // Terrain profile: platform → vert → curve → flat → curve → vert → platform
     function surfaceY(x: number): number {
       if (x <= PLAT_W) return lipY;
       if (x <= PLAT_W + curveR) {
         const dx = x - (PLAT_W + curveR);
-        return vertEndY + Math.sqrt(Math.max(0, curveR * curveR - dx * dx));
+        return curveTopY + Math.sqrt(Math.max(0, curveR * curveR - dx * dx));
       }
       if (x >= vW - PLAT_W - curveR && x <= vW - PLAT_W) {
         const dx = x - (vW - PLAT_W - curveR);
-        return vertEndY + Math.sqrt(Math.max(0, curveR * curveR - dx * dx));
+        return curveTopY + Math.sqrt(Math.max(0, curveR * curveR - dx * dx));
       }
       if (x >= vW - PLAT_W) return lipY;
       return groundY;
@@ -155,17 +154,11 @@ export default function SkatePark({ className, visible = true }: Props) {
       if (x <= PLAT_W) return [0, -1];
       if (x <= PLAT_W + curveR) {
         const sy = surfaceY(x);
-        return [
-          (PLAT_W + curveR - x) / curveR,
-          (vertEndY - sy) / curveR,
-        ];
+        return [(PLAT_W + curveR - x) / curveR, (curveTopY - sy) / curveR];
       }
       if (x >= vW - PLAT_W - curveR && x <= vW - PLAT_W) {
         const sy = surfaceY(x);
-        return [
-          (vW - PLAT_W - curveR - x) / curveR,
-          (vertEndY - sy) / curveR,
-        ];
+        return [(vW - PLAT_W - curveR - x) / curveR, (curveTopY - sy) / curveR];
       }
       if (x >= vW - PLAT_W) return [0, -1];
       return [0, -1];
@@ -176,187 +169,173 @@ export default function SkatePark({ className, visible = true }: Props) {
       return Math.atan2(nx, -ny);
     }
 
-    // ── Resize ────────────────────────────────────────────────────────────
-    const resize = () => {
+    // ── Resize ──────────────────────────────────────────────────────────
+    const handleResize = () => {
       dpr = window.devicePixelRatio || 1;
       const { offsetWidth: w, offsetHeight: h } = container;
-      const s = h / DESIGN_H;
-      vW = w / s;
-      realW = w;
+      const scale = h / VIRTUAL_H;
+      vW = w / scale;
+      pixelW = w;
 
       canvas.width = w * dpr;
       canvas.height = h * dpr;
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
-      ctx.setTransform(dpr * s, 0, 0, dpr * s, 0, 0);
+      ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
 
       const cs = getComputedStyle(document.body);
       fg = cs.getPropertyValue("--fg").trim() || "#1c1916";
       muted = cs.getPropertyValue("--muted").trim() || "#8a7a6e";
-      borderColor = cs.getPropertyValue("--border").trim() || "#ddd5cc";
+      border = cs.getPropertyValue("--border").trim() || "#ddd5cc";
       accent = cs.getPropertyValue("--accent").trim() || "#b05c3a";
-      monoFont = cs.getPropertyValue("--font-mono").trim() || "monospace";
+      mono = cs.getPropertyValue("--font-mono").trim() || "monospace";
 
       groundY = vH - GROUND_MARGIN;
-      const qpR = Math.max(
-        VERT_H + 1,
-        Math.min(QP_MAX_R, groundY - PLAT_W - 4),
-      );
+      const qpR = Math.max(VERT_H + 1, Math.min(QP_MAX_R, groundY - PLAT_W - 4));
       curveR = Math.max(1, qpR - VERT_H);
       lipY = groundY - qpR;
-      vertEndY = lipY + VERT_H;
+      curveTopY = lipY + VERT_H;
 
-      railX1 = vW / 2 - RAIL_HALF_W;
-      railX2 = vW / 2 + RAIL_HALF_W;
-      railY = groundY - RAIL_HEIGHT;
+      railX1 = vW / 2 - RAIL_HALF_LEN;
+      railX2 = vW / 2 + RAIL_HALF_LEN;
+      railY = groundY - RAIL_H;
 
-      if (sk.x === 0) {
-        sk.x = vW / 2;
-        sk.y = groundY;
+      if (skater.x === 0) {
+        skater.x = vW / 2;
+        skater.y = groundY;
       }
     };
 
-    // ── Jump / kickflip ───────────────────────────────────────────────────
+    // ── Ollie / kickflip ────────────────────────────────────────────────
     function ollie() {
-      if (sk.onGround) {
-        const [nx, ny] = surfaceNormal(sk.x);
-        sk.vx += nx * JUMP_SPEED * 0.35;
-        sk.vy = ny * JUMP_SPEED;
-        sk.onGround = false;
-      } else if (sk.onRail) {
-        sk.vy = -JUMP_SPEED;
-        sk.onRail = false;
-      } else if (!sk.kickflipping) {
-        const dy = surfaceY(sk.x) - sk.y;
-        const disc = sk.vy * sk.vy + 2 * GRAVITY * Math.max(0, dy);
-        const tLand = (-sk.vy + Math.sqrt(disc)) / GRAVITY;
-        sk.kickflipping = true;
-        sk.flipAngle = 0;
-        sk.flipSpeed = Math.min(40, Math.max(12, 360 / (tLand * 0.75)));
+      if (skater.onGround) {
+        // Jump along surface normal so ramp launches feel natural
+        const [nx, ny] = surfaceNormal(skater.x);
+        skater.vx += nx * OLLIE_VEL * 0.35;
+        skater.vy = ny * OLLIE_VEL;
+        skater.onGround = false;
+      } else if (skater.onRail) {
+        skater.vy = -OLLIE_VEL;
+        skater.onRail = false;
+      } else if (!skater.flipping) {
+        // Airborne → kickflip. Set flip speed to land one full rotation.
+        const h = surfaceY(skater.x) - skater.y;
+        const disc = skater.vy * skater.vy + 2 * GRAVITY * Math.max(0, h);
+        const tLand = (-skater.vy + Math.sqrt(disc)) / GRAVITY;
+        skater.flipping = true;
+        skater.flipAngle = 0;
+        skater.flipSpeed = Math.min(40, Math.max(12, 360 / (tLand * 0.75)));
       }
     }
 
-    // ── Input ─────────────────────────────────────────────────────────────
+    // ── Input ───────────────────────────────────────────────────────────
     const onKeyDown = (e: KeyboardEvent) => {
       if (GAME_KEYS.has(e.code)) e.preventDefault();
       keys[e.code] = true;
       if (e.code === "ArrowUp" || e.code === "KeyW") ollie();
     };
-    const onKeyUp = (e: KeyboardEvent) => {
-      keys[e.code] = false;
-    };
+    const onKeyUp = (e: KeyboardEvent) => { keys[e.code] = false; };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
 
-    // ── Physics step ──────────────────────────────────────────────────────
+    // ── Physics ─────────────────────────────────────────────────────────
     function step(t: number) {
       if (keys["ArrowLeft"] || keys["KeyA"]) {
-        sk.vx -= MOVE_ACCEL * t;
-        sk.facing = -1;
+        skater.vx -= PUSH_ACCEL * t;
+        skater.facing = -1;
       }
       if (keys["ArrowRight"] || keys["KeyD"]) {
-        sk.vx += MOVE_ACCEL * t;
-        sk.facing = 1;
+        skater.vx += PUSH_ACCEL * t;
+        skater.facing = 1;
       }
-      sk.vx = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, sk.vx));
+      skater.vx = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, skater.vx));
 
-      if (sk.onRail) {
-        sk.vy = 0;
-        sk.y = railY + RAIL_SNAP;
-        sk.vx *= Math.pow(RAIL_FRICTION, t);
-        if (sk.sparks.length < MAX_SPARKS && Math.random() < SPARK_CHANCE) {
+      if (skater.onRail) {
+        skater.vy = 0;
+        skater.y = railY + RAIL_SNAP;
+        skater.vx *= Math.pow(FRICTION_RAIL, t);
+
+        if (skater.sparks.length < MAX_SPARKS && Math.random() < SPARK_CHANCE) {
           const a = -Math.PI * 0.6 + Math.random() * Math.PI * 0.4;
-          sk.sparks.push({
-            x: sk.x,
-            y: railY,
+          skater.sparks.push({
+            x: skater.x, y: railY,
             vx: Math.cos(a) * (1.5 + Math.random() * 2.5),
             vy: Math.sin(a) * 1.5 - 1,
             life: 1,
           });
         }
-        if (sk.x < railX1 - 2 || sk.x > railX2 + 2) sk.onRail = false;
-      } else if (sk.onGround) {
-        sk.vy = 0;
-        sk.vx *= Math.pow(GND_FRICTION, t);
+
+        if (skater.x < railX1 - 2 || skater.x > railX2 + 2) skater.onRail = false;
+      } else if (skater.onGround) {
+        skater.vy = 0;
+        skater.vx *= Math.pow(FRICTION_GROUND, t);
       } else {
-        sk.vy += GRAVITY * t;
-        sk.vx *= Math.pow(AIR_FRICTION, t);
+        skater.vy += GRAVITY * t;
+        skater.vx *= Math.pow(FRICTION_AIR, t);
       }
 
-      sk.x += sk.vx * t;
-      sk.y += sk.vy * t;
+      skater.x += skater.vx * t;
+      skater.y += skater.vy * t;
 
-      if (sk.onGround && !sk.onRail) sk.y = surfaceY(sk.x);
+      if (skater.onGround && !skater.onRail) skater.y = surfaceY(skater.x);
 
-      // Rotation
-      if (sk.onGround) {
-        sk.drawAngle = surfaceAngle(sk.x);
-      } else if (sk.onRail) {
-        sk.drawAngle += -sk.drawAngle * 0.15 * t;
+      // Tilt: match surface on ground, ease toward level in air
+      if (skater.onGround) {
+        skater.tilt = surfaceAngle(skater.x);
+      } else if (skater.onRail) {
+        skater.tilt += -skater.tilt * 0.15 * t;
       } else {
-        sk.drawAngle += -sk.drawAngle * 0.04 * t;
+        skater.tilt += -skater.tilt * 0.04 * t;
       }
 
       // Wall bounce
-      if (sk.x < 1) {
-        sk.x = 1;
-        sk.vx = Math.abs(sk.vx) * 0.4;
-      }
-      if (sk.x > vW - 1) {
-        sk.x = vW - 1;
-        sk.vx = -Math.abs(sk.vx) * 0.4;
-      }
+      if (skater.x < 1) { skater.x = 1; skater.vx = Math.abs(skater.vx) * 0.4; }
+      if (skater.x > vW - 1) { skater.x = vW - 1; skater.vx = -Math.abs(skater.vx) * 0.4; }
 
-      // Surface / rail collision
-      if (!sk.onRail) {
-        const prevOnGround = sk.onGround;
-        sk.onGround = false;
-        const sy = surfaceY(sk.x);
+      // ── Collision ───────────────────────────────────────────────────
+      if (!skater.onRail) {
+        const wasGrounded = skater.onGround;
+        skater.onGround = false;
+        const sy = surfaceY(skater.x);
 
-        if (sk.y >= sy) {
-          sk.y = sy;
-          if (sk.x <= PLAT_W && sk.vx < -BOOST_MIN_SPD) {
-            sk.vy = -Math.min(Math.abs(sk.vx) * 0.7, JUMP_SPEED * 1.2);
-            sk.vx *= 0.25;
-          } else if (sk.x >= vW - PLAT_W && sk.vx > BOOST_MIN_SPD) {
-            sk.vy = -Math.min(Math.abs(sk.vx) * 0.7, JUMP_SPEED * 1.2);
-            sk.vx *= 0.25;
+        if (skater.y >= sy) {
+          skater.y = sy;
+
+          // Quarterpipe boost: convert horizontal speed into a vertical launch
+          if (skater.x <= PLAT_W && skater.vx < -BOOST_THRESHOLD) {
+            skater.vy = -Math.min(Math.abs(skater.vx) * 0.7, OLLIE_VEL * 1.2);
+            skater.vx *= 0.25;
+          } else if (skater.x >= vW - PLAT_W && skater.vx > BOOST_THRESHOLD) {
+            skater.vy = -Math.min(Math.abs(skater.vx) * 0.7, OLLIE_VEL * 1.2);
+            skater.vx *= 0.25;
           } else {
-            sk.vy = 0;
-            sk.onGround = true;
-            if (!prevOnGround) {
-              sk.kickflipping = false;
-              sk.flipAngle = 0;
-            }
+            skater.vy = 0;
+            skater.onGround = true;
+            if (!wasGrounded) { skater.flipping = false; skater.flipAngle = 0; }
           }
         } else {
-          const truckWorldY = sk.y - RAIL_SNAP;
+          // Check rail grind: falling, within rail bounds, truck about to cross rail
+          const truckY = skater.y - RAIL_SNAP;
+          const truckNextY = truckY + skater.vy * t + GRAVITY * t * 2;
           if (
-            sk.x > railX1 &&
-            sk.x < railX2 &&
-            sk.vy > 0 &&
-            truckWorldY <= railY &&
-            truckWorldY + sk.vy * t + GRAVITY * t * 2 >= railY
+            skater.x > railX1 && skater.x < railX2 &&
+            skater.vy > 0 && truckY <= railY && truckNextY >= railY
           ) {
-            sk.onRail = true;
-            sk.y = railY + RAIL_SNAP;
-            sk.vy = 0;
-            sk.kickflipping = false;
-            sk.flipAngle = 0;
+            skater.onRail = true;
+            skater.y = railY + RAIL_SNAP;
+            skater.vy = 0;
+            skater.flipping = false;
+            skater.flipAngle = 0;
           }
         }
       }
 
-      if (sk.kickflipping) {
-        sk.flipAngle += sk.flipSpeed * t;
-        if (sk.flipAngle >= 360) {
-          sk.flipAngle = 0;
-          sk.kickflipping = false;
-        }
+      if (skater.flipping) {
+        skater.flipAngle += skater.flipSpeed * t;
+        if (skater.flipAngle >= 360) { skater.flipAngle = 0; skater.flipping = false; }
       }
 
-      // Spark physics
-      sk.sparks = sk.sparks.filter((sp) => {
+      skater.sparks = skater.sparks.filter((sp) => {
         sp.x += sp.vx * t;
         sp.y += sp.vy * t;
         sp.vy += 0.15 * t;
@@ -365,21 +344,20 @@ export default function SkatePark({ className, visible = true }: Props) {
       });
     }
 
-    // ── Render ─────────────────────────────────────────────────────────────
+    // ── Render ───────────────────────────────────────────────────────────
     function render() {
-      const airborne = !sk.onGround && !sk.onRail;
-
+      const airborne = !skater.onGround && !skater.onRail;
       ctx.clearRect(0, 0, vW, vH);
 
       // Terrain fill
       ctx.beginPath();
       ctx.moveTo(0, lipY);
       ctx.lineTo(PLAT_W, lipY);
-      ctx.lineTo(PLAT_W, vertEndY);
-      ctx.arc(PLAT_W + curveR, vertEndY, curveR, Math.PI, Math.PI / 2, true);
+      ctx.lineTo(PLAT_W, curveTopY);
+      ctx.arc(PLAT_W + curveR, curveTopY, curveR, Math.PI, Math.PI / 2, true);
       ctx.lineTo(vW - PLAT_W - curveR, groundY);
-      ctx.arc(vW - PLAT_W - curveR, vertEndY, curveR, Math.PI / 2, 0, true);
-      ctx.lineTo(vW - PLAT_W, vertEndY);
+      ctx.arc(vW - PLAT_W - curveR, curveTopY, curveR, Math.PI / 2, 0, true);
+      ctx.lineTo(vW - PLAT_W, curveTopY);
       ctx.lineTo(vW - PLAT_W, lipY);
       ctx.lineTo(vW, lipY);
       ctx.lineTo(vW, vH);
@@ -390,18 +368,18 @@ export default function SkatePark({ className, visible = true }: Props) {
       ctx.fill();
       ctx.globalAlpha = 1;
 
-      // Left quarter-pipe
+      // Left quarterpipe
       ctx.beginPath();
       ctx.moveTo(PLAT_W, lipY);
-      ctx.lineTo(PLAT_W, vertEndY);
-      ctx.arc(PLAT_W + curveR, vertEndY, curveR, Math.PI, Math.PI / 2, true);
+      ctx.lineTo(PLAT_W, curveTopY);
+      ctx.arc(PLAT_W + curveR, curveTopY, curveR, Math.PI, Math.PI / 2, true);
       ctx.strokeStyle = fg;
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      // Right quarter-pipe
+      // Right quarterpipe
       ctx.beginPath();
-      ctx.arc(vW - PLAT_W - curveR, vertEndY, curveR, Math.PI / 2, 0, true);
+      ctx.arc(vW - PLAT_W - curveR, curveTopY, curveR, Math.PI / 2, 0, true);
       ctx.lineTo(vW - PLAT_W, lipY);
       ctx.strokeStyle = fg;
       ctx.lineWidth = 1.5;
@@ -419,10 +397,8 @@ export default function SkatePark({ className, visible = true }: Props) {
 
       // Back walls
       ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(0, lipY);
-      ctx.moveTo(vW, 0);
-      ctx.lineTo(vW, lipY);
+      ctx.moveTo(0, 0); ctx.lineTo(0, lipY);
+      ctx.moveTo(vW, 0); ctx.lineTo(vW, lipY);
       ctx.strokeStyle = fg;
       ctx.lineWidth = 1;
       ctx.globalAlpha = 0.2;
@@ -433,16 +409,14 @@ export default function SkatePark({ className, visible = true }: Props) {
       ctx.beginPath();
       ctx.moveTo(PLAT_W + curveR, groundY);
       ctx.lineTo(vW - PLAT_W - curveR, groundY);
-      ctx.strokeStyle = borderColor;
+      ctx.strokeStyle = border;
       ctx.lineWidth = 1;
       ctx.stroke();
 
       // Rail posts
       ctx.beginPath();
-      ctx.moveTo(railX1 + RAIL_POST_INSET, railY);
-      ctx.lineTo(railX1 + RAIL_POST_INSET, groundY);
-      ctx.moveTo(railX2 - RAIL_POST_INSET, railY);
-      ctx.lineTo(railX2 - RAIL_POST_INSET, groundY);
+      ctx.moveTo(railX1 + RAIL_POST_INSET, railY); ctx.lineTo(railX1 + RAIL_POST_INSET, groundY);
+      ctx.moveTo(railX2 - RAIL_POST_INSET, railY); ctx.lineTo(railX2 - RAIL_POST_INSET, groundY);
       ctx.strokeStyle = muted;
       ctx.lineWidth = 1.5;
       ctx.globalAlpha = 0.4;
@@ -459,7 +433,7 @@ export default function SkatePark({ className, visible = true }: Props) {
       ctx.stroke();
 
       // Sparks
-      for (const sp of sk.sparks) {
+      for (const sp of skater.sparks) {
         ctx.beginPath();
         ctx.arc(sp.x, sp.y, 1.2, 0, Math.PI * 2);
         ctx.fillStyle = accent;
@@ -470,22 +444,22 @@ export default function SkatePark({ className, visible = true }: Props) {
 
       // ── Skater ──────────────────────────────────────────────────────
       ctx.save();
-      ctx.translate(sk.x, sk.y);
-      ctx.rotate(sk.drawAngle);
+      ctx.translate(skater.x, skater.y);
+      ctx.rotate(skater.tilt);
       ctx.translate(0, -WHEEL_BOTTOM);
 
       // Board
       ctx.save();
-      if (sk.kickflipping) {
-        ctx.scale(1, Math.cos((sk.flipAngle * Math.PI) / 180));
+      if (skater.flipping) {
+        ctx.scale(1, Math.cos((skater.flipAngle * Math.PI) / 180));
       }
       ctx.beginPath();
-      ctx.moveTo(-BW / 2 - TIP_OVER, KICK_Y);
-      ctx.lineTo(-BW / 2 + KICK_TRANS, 0);
-      ctx.lineTo(BW / 2 - KICK_TRANS, 0);
-      ctx.lineTo(BW / 2 + TIP_OVER, KICK_Y);
+      ctx.moveTo(-BOARD_W / 2 - TIP_OVER, KICK_RISE);
+      ctx.lineTo(-BOARD_W / 2 + KICK_BLEND, 0);
+      ctx.lineTo(BOARD_W / 2 - KICK_BLEND, 0);
+      ctx.lineTo(BOARD_W / 2 + TIP_OVER, KICK_RISE);
       ctx.strokeStyle = fg;
-      ctx.lineWidth = BH;
+      ctx.lineWidth = BOARD_H;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.globalAlpha = 0.9;
@@ -493,7 +467,7 @@ export default function SkatePark({ className, visible = true }: Props) {
 
       [-TRUCK_X, TRUCK_X].forEach((wx) => {
         ctx.beginPath();
-        ctx.arc(wx, WHEEL_CY, WR, 0, Math.PI * 2);
+        ctx.arc(wx, WHEEL_CY, WHEEL_R, 0, Math.PI * 2);
         ctx.fillStyle = fg;
         ctx.globalAlpha = 0.85;
         ctx.fill();
@@ -501,114 +475,112 @@ export default function SkatePark({ className, visible = true }: Props) {
       ctx.restore();
       ctx.globalAlpha = 1;
 
-      // Body
-      const legBase = -BH * 0.5;
+      // Stick figure
+      const hipY = -BOARD_H * 0.5;
       const onCurve =
-        sk.onGround &&
-        ((sk.x > PLAT_W && sk.x <= PLAT_W + curveR) ||
-          (sk.x >= vW - PLAT_W - curveR && sk.x < vW - PLAT_W));
-      const legLen = airborne || onCurve ? LEG_AIR : LEG_GND;
+        skater.onGround &&
+        ((skater.x > PLAT_W && skater.x <= PLAT_W + curveR) ||
+          (skater.x >= vW - PLAT_W - curveR && skater.x < vW - PLAT_W));
+      const leg = airborne || onCurve ? LEG_AIR : LEG_STAND;
 
       ctx.strokeStyle = fg;
       ctx.lineWidth = LIMB_W;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
 
-      if (sk.kickflipping) {
-        const frontExt = Math.max(
-          0,
-          Math.sin((sk.flipAngle * Math.PI) / 180),
-        );
-        const f = sk.facing;
+      if (skater.flipping) {
+        const progress = Math.max(0, Math.sin((skater.flipAngle * Math.PI) / 180));
+        const d = skater.facing;
         ctx.beginPath();
-        ctx.moveTo(f * HIP_X, legBase);
-        ctx.lineTo(f * (FLICK_REACH + frontExt * FLICK_EXT), legBase - legLen * 0.25);
-        ctx.lineTo(f * (TUCK_FOOT + frontExt * TUCK_FOOT_EXT), legBase - legLen);
-        ctx.moveTo(-f * HIP_X, legBase);
-        ctx.lineTo(-f * TUCK_KNEE, legBase - legLen * 0.5);
-        ctx.lineTo(-f * 1, legBase - legLen);
+        ctx.moveTo(d * HIP_X, hipY);
+        ctx.lineTo(d * (FLICK_REACH + progress * FLICK_EXT), hipY - leg * 0.25);
+        ctx.lineTo(d * (TUCK_FOOT + progress * TUCK_FOOT_EXT), hipY - leg);
+        ctx.moveTo(-d * HIP_X, hipY);
+        ctx.lineTo(-d * TUCK_KNEE, hipY - leg * 0.5);
+        ctx.lineTo(-d * 1, hipY - leg);
         ctx.stroke();
       } else if (airborne) {
         ctx.beginPath();
-        ctx.moveTo(-HIP_X, legBase);
-        ctx.lineTo(-KNEE_X, legBase - legLen * 0.5);
-        ctx.lineTo(-1, legBase - legLen);
-        ctx.moveTo(HIP_X, legBase);
-        ctx.lineTo(KNEE_X, legBase - legLen * 0.5);
-        ctx.lineTo(1, legBase - legLen);
+        ctx.moveTo(-HIP_X, hipY);
+        ctx.lineTo(-KNEE_X_AIR, hipY - leg * 0.5);
+        ctx.lineTo(-1, hipY - leg);
+        ctx.moveTo(HIP_X, hipY);
+        ctx.lineTo(KNEE_X_AIR, hipY - leg * 0.5);
+        ctx.lineTo(1, hipY - leg);
         ctx.stroke();
       } else {
         ctx.beginPath();
-        ctx.moveTo(-HIP_X, legBase);
-        ctx.lineTo(-STAND_KNEE_X, legBase - legLen * 0.55);
-        ctx.lineTo(1, legBase - legLen);
-        ctx.moveTo(HIP_X, legBase);
-        ctx.lineTo(STAND_KNEE_X, legBase - legLen * 0.55);
-        ctx.lineTo(1, legBase - legLen);
+        ctx.moveTo(-HIP_X, hipY);
+        ctx.lineTo(-KNEE_X_STAND, hipY - leg * 0.55);
+        ctx.lineTo(1, hipY - leg);
+        ctx.moveTo(HIP_X, hipY);
+        ctx.lineTo(KNEE_X_STAND, hipY - leg * 0.55);
+        ctx.lineTo(1, hipY - leg);
         ctx.stroke();
       }
 
-      const bodyBase = legBase - legLen;
+      const waist = hipY - leg;
       ctx.beginPath();
-      ctx.moveTo(1, bodyBase);
-      ctx.lineTo(1, bodyBase - TORSO);
+      ctx.moveTo(1, waist);
+      ctx.lineTo(1, waist - TORSO);
       ctx.stroke();
+
       ctx.beginPath();
-      ctx.moveTo(1, bodyBase - TORSO * 0.35);
-      ctx.lineTo(1 + sk.facing * ARM, bodyBase - TORSO * 0.05);
+      ctx.moveTo(1, waist - TORSO * 0.35);
+      ctx.lineTo(1 + skater.facing * ARM, waist - TORSO * 0.05);
       ctx.stroke();
+
       ctx.beginPath();
-      ctx.arc(1, bodyBase - TORSO - HEAD_R * 0.8, HEAD_R, 0, Math.PI * 2);
+      ctx.arc(1, waist - TORSO - HEAD_R * 0.8, HEAD_R, 0, Math.PI * 2);
       ctx.fillStyle = fg;
       ctx.fill();
 
       ctx.restore();
       ctx.globalAlpha = 1;
 
-      // Controls hint (screen coords)
+      // Controls hint (screen-pixel coords)
       ctx.save();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.font = `10px ${monoFont}`;
+      ctx.font = `10px ${mono}`;
       ctx.fillStyle = muted;
       ctx.globalAlpha = 0.6;
-      const rows: [string, string][] = [
+      const controls: [string, string][] = [
         ["← → / AD", "move"],
         ["↑ / W", "ollie"],
         ["↑↑ / WW", "kickflip"],
       ];
-      const keyCol = realW - 70;
+      const col = pixelW - 70;
       let y = 18;
-      for (const [key, label] of rows) {
+      for (const [key, label] of controls) {
         ctx.textAlign = "right";
-        ctx.fillText(key, keyCol, y);
+        ctx.fillText(key, col, y);
         ctx.textAlign = "left";
-        ctx.fillText(label, keyCol + 8, y);
+        ctx.fillText(label, col + 8, y);
         y += 14;
       }
       ctx.restore();
     }
 
-    // ── Draw loop ─────────────────────────────────────────────────────────
+    // ── Game loop ───────────────────────────────────────────────────────
     let lastTime = performance.now();
 
-    const draw = (now: number) => {
+    const loop = (now: number) => {
       const dt = Math.min(now - lastTime, 50);
       lastTime = now;
-      const t = dt / 16.67;
+      const t = dt / 16.67; // normalize to 60fps
 
       step(t);
       render();
-
-      raf = requestAnimationFrame(draw);
+      rafId = requestAnimationFrame(loop);
     };
 
-    const ro = new ResizeObserver(resize);
+    const ro = new ResizeObserver(handleResize);
     ro.observe(container);
-    resize();
-    raf = requestAnimationFrame(draw);
+    handleResize();
+    rafId = requestAnimationFrame(loop);
 
     return () => {
-      cancelAnimationFrame(raf);
+      cancelAnimationFrame(rafId);
       ro.disconnect();
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);

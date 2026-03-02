@@ -2,7 +2,10 @@ import { books } from "@/lib/books";
 import HomeSidebar from "@/components/HomeSidebar";
 import PageLayout from "@/components/PageLayout";
 
-export const metadata = { title: "Reading — Derek Leonhardt" };
+export const metadata = {
+  title: "Reading — Derek Leonhardt",
+  description: "Books I'm working through and ones I would highly recommend",
+};
 
 const reading = books.filter((b) => b.status === "reading");
 const read = books.filter((b) => b.status === "read");

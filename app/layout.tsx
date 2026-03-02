@@ -18,6 +18,7 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://derekleonhardt.com"),
   title: "Derek Leonhardt",
   description: "Software engineer",
   openGraph: {
@@ -25,6 +26,8 @@ export const metadata: Metadata = {
     description: "Software engineer",
     type: "website",
   },
+  twitter: { card: "summary" },
+  alternates: { types: { "application/rss+xml": "/feed.xml" } },
 };
 
 export default function RootLayout({

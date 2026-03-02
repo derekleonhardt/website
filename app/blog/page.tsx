@@ -4,7 +4,10 @@ import { getReadingTime } from "@/lib/reading-time";
 import HomeSidebar from "@/components/HomeSidebar";
 import PageLayout from "@/components/PageLayout";
 
-export const metadata = { title: "Writing — Derek Leonhardt" };
+export const metadata = {
+  title: "Writing — Derek Leonhardt",
+  description: "Occasional writing on software, systems, and things I'm figuring out.",
+};
 
 export default function BlogPage() {
   return (

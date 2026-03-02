@@ -712,18 +712,28 @@ a {
 
 /* ── Hero animation ───────────────────────────────────────────────────── */
 .hero-name {
+  font-size: clamp(2.5rem, 2.5rem + 1.5vw, 3.75rem);
+  font-weight: 300;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  margin: 0 0 1.75rem;
   animation: fadeUp 0.6s ease forwards;
   animation-delay: 0.1s;
   opacity: 0;
 }
 
 .hero-bio {
+  margin: 0 0 1.5rem;
   animation: fadeUp 0.6s ease forwards;
   animation-delay: 0.3s;
   opacity: 0;
 }
 
 .hero-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2.75rem;
   animation: fadeUp 0.6s ease forwards;
   animation-delay: 0.5s;
   opacity: 0;
@@ -733,6 +743,24 @@ a {
   animation: fadeUp 0.6s ease forwards;
   animation-delay: 0.7s;
   opacity: 0;
+}
+
+.hero-recents .label {
+  margin-bottom: 0.75rem;
+}
+
+.social-icons {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+}
+
+.recent-row__title {
+  font-size: 1.25rem;
+}
+
+.recent-row__meta {
+  font-size: 10px;
 }
 
 .photo-card__media img {

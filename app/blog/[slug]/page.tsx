@@ -1,9 +1,7 @@
-import fs from "fs";
-import path from "path";
 import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import rehypeSlug from "rehype-slug";
-import { posts } from "@/lib/posts";
+import { posts, getPostContent } from "@/lib/posts";
 import PostSidebar from "@/components/PostSidebar";
 import PageLayout from "@/components/PageLayout";
 
@@ -15,19 +13,6 @@ interface Heading {
   id: string;
   text: string;
   level: number;
-}
-
-function getPostContent(slug: string): string | null {
-  for (const ext of [".mdx", ".md"]) {
-    const filePath = path.join(
-      process.cwd(),
-      "content",
-      "blog",
-      `${slug}${ext}`,
-    );
-    if (fs.existsSync(filePath)) return fs.readFileSync(filePath, "utf8");
-  }
-  return null;
 }
 
 // Matches rehype-slug's github-slugger output
@@ -55,8 +40,17 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
   const post = posts.find((p) => p.slug === slug);
+  const content = getPostContent(slug);
+  const excerpt = content
+    ? content
+        .replace(/^#.+$/gm, "")
+        .replace(/\n+/g, " ")
+        .trim()
+        .slice(0, 160)
+    : undefined;
   return {
     title: post ? `${post.title} — Derek Leonhardt` : "Post — Derek Leonhardt",
+    description: excerpt,
   };
 }
 

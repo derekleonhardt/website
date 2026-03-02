@@ -2,7 +2,10 @@ import { projects } from "@/lib/projects";
 import HomeSidebar from "@/components/HomeSidebar";
 import PageLayout from "@/components/PageLayout";
 
-export const metadata = { title: "Projects — Derek Leonhardt" };
+export const metadata = {
+  title: "Projects — Derek Leonhardt",
+  description: "Tinkering",
+};
 
 export default function ProjectsPage() {
   return (
