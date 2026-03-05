@@ -27,7 +27,7 @@ export const books: Book[] = [
     status: "read",
     finishedYear: 2026,
     thoughts:
-      'Might be my favorite book ever, have read and listened to it multiple times. An interesting blend of wanderlust, self growth, interesting characters, and a lot of surfing. How do you reconcile the pull of a lifelong pursuit into the responsibilities of everyday life? "Was surfing even what I was doing?"',
+      'Might be my favorite book ever, have read and listened to it multiple times. An interesting blend of wanderlust, self growth, interesting characters, and a lot of surfing. How do you reconcile the pull of a lifelong pursuit and the responsibilities of everyday life? "Was surfing even what I was doing?"',
   },
   {
     title: "Shoe Dog",
