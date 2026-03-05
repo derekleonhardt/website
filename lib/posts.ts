@@ -8,11 +8,11 @@ export interface Post {
 }
 
 export const posts: Post[] = [
-  {
-    slug: "hello-world",
-    title: "Hello World",
-    date: "2026-02-27",
-  },
+  // {
+  //   slug: "hello-world",
+  //   title: "Hello World",
+  //   date: "2026-02-27",
+  // },
 ];
 
 export function getPostContent(slug: string): string | null {

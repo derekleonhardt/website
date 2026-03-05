@@ -4,7 +4,7 @@ import PageLayout from "@/components/PageLayout";
 
 export const metadata = {
   title: "Reading — Derek Leonhardt",
-  description: "Books I'm working through and ones I would highly recommend",
+  description: "Books I'm reading and ones I'd recommend",
 };
 
 const reading = books.filter((b) => b.status === "reading");

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import HomeSidebar from "@/components/HomeSidebar";
 import { projects } from "@/lib/projects";
-import { posts } from "@/lib/posts";
+// import { posts } from "@/lib/posts";
 import { FaGithub, FaLinkedin, FaXTwitter, FaEnvelope } from "react-icons/fa6";
 
 const recentItems = [
@@ -13,14 +13,14 @@ const recentItems = [
     sortKey: `${p.year}-01-01`,
     external: true,
   })),
-  ...posts.slice(0, 3).map((p) => ({
-    kind: "post" as const,
-    title: p.title,
-    href: `/blog/${p.slug}`,
-    meta: p.date,
-    sortKey: p.date,
-    external: false,
-  })),
+  // ...posts.slice(0, 3).map((p) => ({
+  //   kind: "post" as const,
+  //   title: p.title,
+  //   href: `/blog/${p.slug}`,
+  //   meta: p.date,
+  //   sortKey: p.date,
+  //   external: false,
+  // })),
 ]
   .sort((a, b) => b.sortKey.localeCompare(a.sortKey))
   .slice(0, 5);
