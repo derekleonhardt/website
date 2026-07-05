@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const themes = [
   { id: "azure", label: "azure", accent: "#3b82f6" },
@@ -13,16 +13,25 @@ type ThemeId = (typeof themes)[number]["id"];
 
 export default function ThemeToggle({ className }: { className?: string }) {
   const [idx, setIdx] = useState(0);
+  const firstRun = useRef(true);
 
+  // Reconcile React state with the saved theme once on mount. The pre-paint
+  // inline script in layout.tsx has already applied it to <html>, so here we
+  // only sync `idx` — the apply-effect below skips its first run to avoid
+  // clobbering that theme before this sync lands.
   useEffect(() => {
     const saved = localStorage.getItem("theme") as ThemeId | null;
     const i = themes.findIndex((t) => t.id === saved);
-    if (i < 0) return;
+    if (i <= 0) return;
     const raf = window.requestAnimationFrame(() => setIdx(i));
     return () => window.cancelAnimationFrame(raf);
   }, []);
 
   useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
     const { id } = themes[idx];
     if (id === "azure") {
       document.documentElement.removeAttribute("data-theme");

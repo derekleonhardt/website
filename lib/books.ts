@@ -23,7 +23,7 @@ export const books: Book[] = [
   },
   {
     title: "Barbarian Days: A Surfing Life",
-    author: "Sebastian Raschka",
+    author: "William Finnegan",
     status: "read",
     finishedYear: 2026,
     thoughts:
