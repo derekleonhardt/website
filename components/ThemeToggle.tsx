@@ -12,17 +12,23 @@ const themes = [
 type ThemeId = (typeof themes)[number]["id"];
 
 export default function ThemeToggle({ className }: { className?: string }) {
-  const [idx, setIdx] = useState(0);
+  const [idx, setIdx] = useState<number | null>(null);
 
+  // Reconcile React state with the saved theme once on mount. `idx` starts
+  // null ("not yet reconciled"); the pre-paint inline script in layout.tsx has
+  // already applied the saved theme to <html>, and the apply-effect below is a
+  // no-op while idx is null, so mount never clobbers that theme (robust under
+  // StrictMode's double effect invoke).
   useEffect(() => {
     const saved = localStorage.getItem("theme") as ThemeId | null;
     const i = themes.findIndex((t) => t.id === saved);
-    if (i < 0) return;
+    if (i <= 0) return;
     const raf = window.requestAnimationFrame(() => setIdx(i));
     return () => window.cancelAnimationFrame(raf);
   }, []);
 
   useEffect(() => {
+    if (idx === null) return;
     const { id } = themes[idx];
     if (id === "azure") {
       document.documentElement.removeAttribute("data-theme");
@@ -34,14 +40,14 @@ export default function ThemeToggle({ className }: { className?: string }) {
 
   const cycle = () => {
     document.documentElement.classList.add("theme-fade");
-    setIdx((i) => (i + 1) % themes.length);
+    setIdx((i) => ((i ?? 0) + 1) % themes.length);
     setTimeout(
       () => document.documentElement.classList.remove("theme-fade"),
       300,
     );
   };
 
-  const { label, accent } = themes[idx];
+  const { label, accent } = themes[idx ?? 0];
 
   return (
     <button

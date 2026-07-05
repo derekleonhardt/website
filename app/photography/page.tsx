@@ -10,7 +10,7 @@ export const metadata = {
 
 const gallery = (
   <div className="photo-gallery">
-    {photos.map((photo) => (
+    {photos.map((photo, i) => (
       <figure key={photo.src} className="photo-card">
         <div className="photo-card__media">
           <Image
@@ -18,7 +18,11 @@ const gallery = (
             alt={photo.alt}
             width={photo.width}
             height={photo.height}
-            sizes="(max-width: 640px) 100vw, (max-width: 960px) 50vw, 33vw"
+            placeholder="blur"
+            blurDataURL={photo.blurDataURL}
+            priority={i === 0}
+            quality={90}
+            sizes="(max-width: 640px) 100vw, 384px"
           />
         </div>
         <figcaption className="text-muted photo-caption">
